@@ -1,0 +1,11 @@
+providers = ["python"]
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.11.3"
+
+[phases.custom_install]
+cmds = ["pip3 install gunicorn"]
+dependsOn = ['install']
+
+[start]
+cmd = "gunicorn -b 0.0.0.0:8000 --capture-output --log-level debug main_run:app"
