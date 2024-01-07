@@ -23,7 +23,7 @@ ClassMarker webhooks info:
 <br>
 
 ## WORKFLOW 1 - GET ABSOLVED COURSES ON USER'S PROFILE PAGE
-Get active (not expired) trainings of specific user for UI section "Absolved trainings".
+Get active (not expired) trainings of specific user for UI section "Absolved trainings".  
 ![Absolved trainings workflow schema](/diagrams/absolved_trainings.jpg "Absolved trainings workflow schema")
 <br>
 <br>
@@ -34,6 +34,7 @@ Get active (not expired) trainings of specific user for UI section "Absolved tra
 	/members/<user_id>?embed=trainings&embed=privileges https://fabman.io/api/v1/documentation#/members/getMembersId
 
 *	Data from response used in bridge function:  
+
 ```python
 {
     "id": 12345,
@@ -89,9 +90,9 @@ https://fablab-bridge-production.up.railway.app/apidocs/#/absolved-trainings/get
 ## WORKFLOW 2 - GET AVAILABLE COURSES ON USER'S PROFILE PAGE
 Get available (not absolved trainings or expired trainings) for specific user for UI section "Available trainings".
 Some of trainings could be only for admins, some of them could be presence-only without online version.
-User is not able to absolve online course if he is already out of attempts for it.
-![Available trainings filter schema](/diagrams/available_trainings.jpg "Available trainings filter schema")
-![Available trainings render schema](/diagrams/available_trainings_render.jpg "Available trainings render schema")
+User is not able to absolve online course if he is already out of attempts for it.  
+![Available trainings filter schema](/diagrams/available_trainings.jpg "Available trainings filter schema")  
+![Available trainings render schema](/diagrams/available_trainings_render.jpg "Available trainings render schema")  
 <br>
 <br>
 
@@ -99,8 +100,9 @@ User is not able to absolve online course if he is already out of attempts for i
 *	Endpoint:  
 	https://fabman.io/api/v1/members/<user_id>?embed=trainings&embed=privileges (https://fabman.io/api/v1/documentation#/members/getMembersId)
 
-*	Data from response used in bridge function:
-``` python
+*	Data from response used in bridge function:  
+
+```python
 {
     "id": 12345,
     "lockVersion": 1,
@@ -143,7 +145,8 @@ User is not able to absolve online course if he is already out of attempts for i
 	https://fabman.io/api/v1/training-courses/ (https://fabman.io/api/v1/documentation#/training-courses/getTrainingcourses)
 	
 *	Data from response used in bridge function:
-``` python
+
+```python
 {
     "id": 1234,
     "account": 1,
@@ -200,8 +203,8 @@ https://fablab-bridge-production.up.railway.app/apidocs/#/available-trainings/ge
 <br>
 
 ## WORKFLOW 3 - ONLINE CLASSMARKER COURSE
-Integration of process for online courses. Find available course in your user profile -> open quiz via href button -> pass that quiz -> ClassMarker webhook call to FabLab bridge -> handle online course attempt.
-![Online training workflow schema](/diagrams/online_training.jpg "Online training workflow schema")
+Integration of process for online courses. Find available course in your user profile -> open quiz via href button -> pass that quiz -> ClassMarker webhook call to FabLab bridge -> handle online course attempt.  
+![Online training workflow schema](/diagrams/online_training.jpg "Online training workflow schema")  
 <br>
 <br>
  
@@ -217,8 +220,8 @@ Integration of process for online courses. Find available course in your user pr
 *	bridge endpoint: /add_classmarker_training/
 *	request method: POST
 *	request verification with "X-Classmarker-Hmac-Sha256" header: https://www.classmarker.com/online-testing/docs/webhooks/#how-to-verify-webhook-payloads
-*	request payload - data used in bridge function:
-``` python
+*	request payload - data used in bridge function:  
+```python
 {
     "test": {
         "test_name": string
@@ -246,27 +249,24 @@ Integration of process for online courses. Find available course in your user pr
 *	get "metadata" a "lockVersion" from /members/{member_id}/
 *	list "failed_courses" not in user's "metadata" -> create this list and insert current failed course:
 	*	get course's data from /training-courses/{training_id}/
-	*	format of course in list of failed_courses:
-``` python
+ 
+	*	list "failed_courses" in user's "metadata" contains current failed course -> check of "attempts":
+		*	attempts >= MAX_COURSE_ATTEMPTS -> fail, Ran out of attempts
+		*	attempts < MAX_COURSE_ATTEMPTS -> attempts +1
+	*	update of user's metadata via PUT request:
+		*	endpoint: /members/{member_id}
+		*	body:  
+			{ "lockVersion": obtained from /members/{member_id}/, "metadata": new metadata JSON }
+	*	return response 200, "Failed attempt saved in Fabman"
+ ```python
+format of course in list of failed_courses:
+
 {
     "id": int (course ID from FabMan),
     "title": str (course title from FabMan),
     "attempts": int (default = 1)
 }
 ```
-	*	list "failed_courses" in user's "metadata" contains current failed course -> check of "attempts":
-		*	attempts >= MAX_COURSE_ATTEMPTS -> fail, Ran out of attempts
-		*	attempts < MAX_COURSE_ATTEMPTS -> attempts +1
-	*	update of user's metadata via PUT request:
-		*	endpoint: /members/{member_id}
-		*	body:
-``` python
-{
-    "lockVersion": obtained from /members/{member_id}/,
-    "metadata": new metadata JSON
-}
-```
-	*	return response 200, "Failed attempt saved in Fabman"
 
 <br>
 <br>
@@ -279,8 +279,9 @@ Integration of process for online courses. Find available course in your user pr
 *	update of member's trainings:
 	*	endpoint: /members/{member_id}/trainings
 	*	request method: POST
-	*	request body:
-``` python
+	*	request body:  
+
+```python
 {
     "date": today in format YYYY-MM-DD,
     "fromDate": today in format YYYY-MM-DD,
@@ -288,6 +289,7 @@ Integration of process for online courses. Find available course in your user pr
     "notes": "Training absolved by Classmarker course"
 }
 ```
+
 *	if current course is in "failed_courses" of member's "metadata":
 	*	remove failed course from metadata:
 		*	request endpoint: /members/{member_id}
