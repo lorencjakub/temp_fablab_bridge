@@ -247,25 +247,25 @@ Integration of process for online courses. Find available course in your user pr
 *	list "failed_courses" not in user's "metadata" -> create this list and insert current failed course:
 	*	get course's data from /training-courses/{training_id}/
 	*	format of course in list of failed_courses:
-   		``` python
-		{
-		    "id": int (course ID from FabMan),
-		    "title": str (course title from FabMan),
-		    "attempts": int (default = 1)
-		}
-  		```
+``` python
+{
+    "id": int (course ID from FabMan),
+    "title": str (course title from FabMan),
+    "attempts": int (default = 1)
+}
+```
 	*	list "failed_courses" in user's "metadata" contains current failed course -> check of "attempts":
 		*	attempts >= MAX_COURSE_ATTEMPTS -> fail, Ran out of attempts
 		*	attempts < MAX_COURSE_ATTEMPTS -> attempts +1
 	*	update of user's metadata via PUT request:
 		*	endpoint: /members/{member_id}
 		*	body:
-    		``` python
-		{
-		    "lockVersion": obtained from /members/{member_id}/,
-		    "metadata": new metadata JSON
-		}
-		```
+``` python
+{
+    "lockVersion": obtained from /members/{member_id}/,
+    "metadata": new metadata JSON
+}
+```
 	*	return response 200, "Failed attempt saved in Fabman"
 
 <br>
@@ -280,14 +280,14 @@ Integration of process for online courses. Find available course in your user pr
 	*	endpoint: /members/{member_id}/trainings
 	*	request method: POST
 	*	request body:
- 		``` python
-		{
-		    "date": today in format YYYY-MM-DD,
-		    "fromDate": today in format YYYY-MM-DD,
-		    "trainingCourse": training_id,
-		    "notes": "Training absolved by Classmarker course"
-		}
-   		```
+``` python
+{
+    "date": today in format YYYY-MM-DD,
+    "fromDate": today in format YYYY-MM-DD,
+    "trainingCourse": training_id,
+    "notes": "Training absolved by Classmarker course"
+}
+```
 *	if current course is in "failed_courses" of member's "metadata":
 	*	remove failed course from metadata:
 		*	request endpoint: /members/{member_id}
