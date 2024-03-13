@@ -1,10 +1,8 @@
-import os
 from datetime import datetime
 from cryptography.fernet import Fernet
 from typing import Dict, List, Union, Tuple
-
-
-FERNET_KEY = os.environ.get("FERNET_KEY", default="")
+from application.configs.config import *
+from application.services.error_handlers import CustomError
 
 
 def expired_date(dt: str, date: bool = True) -> bool:
@@ -59,7 +57,7 @@ def decrypt_identifiers(crypto: str) -> str:
         identifiers = f.decrypt(crypto).decode()
 
     if not identifiers or len(identifiers.split("-")) != 2 or not identifiers.replace("-", "").isdigit():
-        raise Exception("Missing or wrong IDs")
+        raise CustomError("Missing or wrong IDs")
 
     return identifiers
 
@@ -70,11 +68,4 @@ def filter_non_admins_trainings(trainings: List[Dict]) -> List:
     :param trainings: list of trainings
     :return: list of trainings without 'admin_only' = True in metadata
     """
-    return [
-        t for t in trainings
-        if not (
-            (t.get("metadata") or {}).get("admin_only")
-            if not t.get("_embedded")
-            else (t["_embedded"]["trainingCourse"].get("metadata") or {}).get("admin_only")
-        ) or ""
-    ]
+    return [t for t in trainings if t.get("metadata") is None or not t["metadata"].get("admin_only")]

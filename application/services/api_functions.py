@@ -1,18 +1,14 @@
-import os
 import requests
 import hmac
 import hashlib
 import base64
 from datetime import datetime
 from cryptography.fernet import Fernet
+
 from typing import Dict, List, Union, Tuple
-from tools import get_current_training_with_index, get_member_training, expired_date
-
-
-MAX_COURSE_ATTEMPTS = os.environ.get("MAX_COURSE_ATTEMPTS", default=3)
-FERNET_KEY = os.environ.get("FERNET_KEY", default="")
-FABMAN_API_KEY = os.environ.get("FABMAN_API_KEY", default="")
-CLASSMARKER_WEBHOOK_SECRET = os.environ.get("CLASSMARKER_WEBHOOK_SECRET", default="")
+from application.services.tools import get_current_training_with_index, get_member_training, expired_date
+from application.configs.config import *
+from ..services.error_handlers import CustomError
 
 
 def verify_payload(payload, header_hmac_signature):
@@ -52,7 +48,7 @@ def add_training_to_member(member_id: int, training_id: int) -> None:
     )
 
     if res.status_code != 201:
-        raise Exception("Error during passed training posting")
+        raise CustomError("Error during passed training posting")
 
 
 def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | int]]], training_id: int,
@@ -70,11 +66,11 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     failed_courses_list = member_metadata.get("failed_courses") or []
     current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
 
-    if current_course_with_index and current_course_with_index[1]["attempts"] >= MAX_COURSE_ATTEMPTS:
-        raise Exception("Ran out of attempts")
-
     if not count_attempts:
         return failed_courses_list
+
+    if current_course_with_index and current_course_with_index[1]["attempts"] >= MAX_COURSE_ATTEMPTS:
+        raise CustomError("Ran out of attempts")
 
     if not current_course_with_index:
         failed_training = data_from_get_request(f'https://fabman.io/api/v1/training-courses/{training_id}/', token)
@@ -88,21 +84,26 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     return failed_courses_list
 
 
-def process_failed_attempt(member_id: int, training_id: int, count_attempts: bool = False, token: str = None) -> None:
+def process_failed_attempt(member_id: int, training_id: int, count_attempts: bool = False, token: str = None,
+                           member_data: Dict = None, return_attempts: bool = False) -> Union[int, None]:
     """
     Check and update attempts for failed training.
     :param member_id: ID of current user from Fabman DB
     :param training_id: ID of current failed training from Fabman DB
     :param count_attempts: boolean, update or not attempts of failed training in users metadata
     :param token: Fabman API token with admin permissions
+    :param member_data: optional dict with member data
+    :param return_attempts: boolean for returning attempts of failed course
     :raises Error during failed training saving: request failed
     :return:
     """
 
-    member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}/', token)
+    if not member_data:
+        member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}/', token)
 
     member_metadata = member_data.get("metadata") or {}
-    member_metadata["failed_courses"] = parse_failed_courses_data(member_metadata, training_id, count_attempts)
+    member_metadata["failed_courses"] = parse_failed_courses_data(member_metadata, training_id, count_attempts,
+                                                                  token=token)
 
     if count_attempts:
         new_member_data = {
@@ -117,7 +118,12 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
         )
 
         if res.status_code != 200:
-            raise Exception("Error during failed training saving")
+            raise CustomError("Error during failed training saving")
+
+    if return_attempts:
+        updated_fail = next((f for f in member_metadata["failed_courses"] if f["id"] == training_id), {"attempts": 0})
+
+        return updated_fail["attempts"]
 
 
 def remove_failed_training_from_user(member_data: Dict, member_id: int, training_id: int) -> None:
@@ -154,7 +160,7 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
             )
 
             if res.status_code != 200:
-                raise Exception("Error during failed training removing from metadata")
+                raise CustomError("Error during failed training removing from metadata")
 
 
 def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
@@ -165,11 +171,12 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
     :raises Error during data fetching: request failed
     :return: data from GET request
     """
-
+    start = datetime.now().timestamp()
     res = requests.get(url, headers={"Authorization": f'{token}'})
+    print(f'{url} processing time: {round(datetime.now().timestamp() - start, 1)}')
 
     if res.status_code != 200:
-        raise Exception("Error during data fetching")
+        raise CustomError("Error during data fetching", f'{url}, {res.json()}')
 
     data = res.json()
 
@@ -197,22 +204,22 @@ def check_members_training(training_id: int, trainings: List[Dict]) -> str:
 
     if old_training and old_training.get("untilDate"):
         if not expired_date(old_training["untilDate"]):
-            raise Exception("Member has already absolved this training and it is still active")
+            raise CustomError("Member has already absolved this training and it is still active")
 
         expired_training_id = old_training["id"]
 
     return expired_training_id
 
 
-def create_cm_link(
-        member_id: int | str, training_id: int | str, training_list: List[Dict], token: str = None
-) -> Union[str, None]:
+def create_cm_link(member_id: int | str, training_id: int | str, training_list: List[Dict], token: str = None,
+                   member_data: Dict = None) -> Union[str, None]:
     """
     Function for creating URLs for Classmarker, including info about user and Fabman training.
     :param member_id: ID of user in Fabman DB (/members/ API)
     :param training_id: ID of training-course in Fabman DB (/training-courses/ API)
     :param training_list: list of available trainings
     :param token: Fabman API token with admin permissions
+    :param member_data: optional dict with member data
     :return: full URL of Classmarker quiz for current training and current user, empty string if user is out of attempts
     or None if some of user_id, training_id or URL in notes is missing
     """
@@ -223,18 +230,16 @@ def create_cm_link(
         return ""
 
     try:
-        process_failed_attempt(member_id, training_id, token=token)
+        process_failed_attempt(member_id, training_id, token=token, member_data=member_data)
 
     except Exception as e:
-        if "Ran out of attempts" not in e.args:
-            # <<<---------------------- EMAIL: FAILED TRAINING, OUT OF ATTEMPTS---------------------->>>
-
+        if "Ran out of attempts" not in (e.description if isinstance(e, CustomError) else e.args):
             raise e
 
         return ""
 
     index, training = get_current_training_with_index(training_list, training_id)
-    base_url = (training.get("metadata") or {}).get("cm_url") or ""
+    base_url = training["metadata"].get("cm_url") if training.get("metadata") else ""
 
     f = Fernet(FERNET_KEY.encode("ascii", "ignore"))
     id_string = f'{member_id}-{training_id}'
@@ -254,6 +259,21 @@ def get_active_user_trainings_and_user_data(member_id: str, token: str) -> Tuple
         f'https://fabman.io/api/v1/members/{member_id}?embed=trainings&embed=privileges',
         token
     )
+
     trainings = data["_embedded"]["trainings"]
 
-    return [t for t in trainings if (not expired_date(t["untilDate"]) if t["untilDate"] else True)], data
+    return (
+        [
+            {
+                "id": t["trainingCourse"],
+                "title": t["_embedded"]["trainingCourse"]["title"],
+                "date": t["date"],
+                "metadata": t["_embedded"]["trainingCourse"]["metadata"]
+            } for t in trainings if (not expired_date(t["untilDate"]) if t["untilDate"] else True)
+        ],
+        {
+            "metadata": data["metadata"],
+            "privileges": data["_embedded"]["privileges"]["privileges"],
+            "lockVersion": data["lockVersion"]
+        }
+    )
