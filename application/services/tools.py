@@ -68,4 +68,4 @@ def filter_non_admins_trainings(trainings: List[Dict]) -> List:
     :param trainings: list of trainings
     :return: list of trainings without 'admin_only' = True in metadata
     """
-    return [t for t in trainings if t.get("metadata") is None or not t["metadata"].get("admin_only")]
+    return [t for t in trainings if t.get("metadata").get("admin_only") is False]
