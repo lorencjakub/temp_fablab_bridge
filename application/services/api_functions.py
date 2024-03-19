@@ -182,9 +182,9 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
 
     if "/training-courses" in url:
         if isinstance(data, list):
-            return [t for t in data if not (t.get("metadata") or {}).get("not_online")]
+            return [t for t in data if (t.get("metadata") or {}).get("for_web")]
 
-        return data if not (data.get("metadata") or {}).get("not_online") else {}
+        return data if (data.get("metadata") or {}).get("for_web") else {}
 
     return data
 

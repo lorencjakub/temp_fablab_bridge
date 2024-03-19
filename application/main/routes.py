@@ -95,7 +95,7 @@ def get_list_of_available_trainings(member_id: str):
     user_active_trainings, user_data = get_active_user_trainings_and_user_data(member_id, token)
     trainings = data_from_get_request("https://fabman.io/api/v1/training-courses", token)
 
-    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings]
+    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings if t.get("metadata") and t["metadata"].get("for_web")]
     user_active_trainings_ids = [at["id"] for at in user_active_trainings]
 
     available_trainings_for_member = [t for t in trainings_data if t["id"] not in user_active_trainings_ids]
