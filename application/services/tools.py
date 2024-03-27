@@ -1,7 +1,10 @@
 from datetime import datetime
+from flask import session
+import json
 from cryptography.fernet import Fernet
+from functools import wraps
 from typing import Dict, List, Union, Tuple
-from application.configs.config import *
+from application.configs.config import TRACK_TIME, FERNET_KEY
 from application.services.error_handlers import CustomError
 
 
@@ -69,3 +72,27 @@ def filter_non_admins_trainings(trainings: List[Dict]) -> List:
     :return: list of trainings without 'admin_only' = True in metadata
     """
     return [t for t in trainings if t.get("metadata").get("admin_only") is False]
+
+
+def track_api_time(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        session.clear()
+        start = datetime.now().timestamp()
+        res = f(*args, **kwargs)
+        stop = datetime.now().timestamp()
+        session.setdefault("railway_processes_duration", round(stop - start - sum(session.values()), 3))
+        session.setdefault("total", round(sum(session.values()), 3))
+
+        headers = {"Content-Type": "application/json"}
+
+        if TRACK_TIME:
+            headers["Durations"] = dict(session)
+
+        return (
+            json.dumps(res),
+            200,
+            headers
+        )
+
+    return decorator

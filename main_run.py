@@ -1,6 +1,8 @@
 import sys
+import os
 from flask import Flask
-from application.configs.config import *
+from application.configs.config import FABMAN_API_KEY, CLASSMARKER_WEBHOOK_SECRET, FERNET_KEY, FLASK_SECRET_KEY,\
+    MAIL_USERNAME, MAIL_PASSWORD
 from application import create_app
 
 

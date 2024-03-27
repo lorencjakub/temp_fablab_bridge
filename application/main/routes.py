@@ -1,11 +1,9 @@
 import requests
-from flask import Response, request, jsonify
-import traceback
-from application.services.tools import decrypt_identifiers, filter_non_admins_trainings
+from flask import Response, request, jsonify, session
+from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time
 
 from ..configs import swagger_config
-from datetime import datetime
-from application.configs.config import *
+from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME, MAX_COURSE_ATTEMPTS
 from . import main
 from ..services.error_handlers import CustomError, error_handler
 from ..services.api_functions import verify_payload, process_failed_attempt, add_training_to_member, \
@@ -73,6 +71,7 @@ def add_classmarker_training():
 
 @main.route("/absolved_trainings/<member_id>", methods=["GET"])
 @swag_from(swagger_config.absolved_trainings_schema)
+@track_api_time
 @error_handler
 def get_list_of_absolved_trainings(member_id: str):
     trainings = get_active_user_trainings_and_user_data(member_id, request.headers.get("Authorization"))[0]
@@ -84,11 +83,12 @@ def get_list_of_absolved_trainings(member_id: str):
 
         res.append(t)
 
-    return jsonify(res)
+    return res
 
 
 @main.route("/available_trainings/<member_id>", methods=["GET"])
 @swag_from(swagger_config.available_trainings_schema)
+@track_api_time
 @error_handler
 def get_list_of_available_trainings(member_id: str):
     token = request.headers.get("Authorization")
@@ -118,7 +118,7 @@ def get_list_of_available_trainings(member_id: str):
 
         for_render.append(t)
 
-    return jsonify(for_render)
+    return for_render
 
 
 # ------------------------ !!!DEVELOPMENT!!! ------------------------

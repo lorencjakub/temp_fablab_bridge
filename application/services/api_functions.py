@@ -1,4 +1,5 @@
 import requests
+from flask import session
 import hmac
 import hashlib
 import base64
@@ -7,7 +8,7 @@ from cryptography.fernet import Fernet
 
 from typing import Dict, List, Union, Tuple
 from application.services.tools import get_current_training_with_index, get_member_training, expired_date
-from application.configs.config import *
+from application.configs.config import CLASSMARKER_WEBHOOK_SECRET, FABMAN_API_KEY, MAX_COURSE_ATTEMPTS, FERNET_KEY
 from ..services.error_handlers import CustomError
 
 
@@ -173,12 +174,14 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
     """
     start = datetime.now().timestamp()
     res = requests.get(url, headers={"Authorization": f'{token}'})
-    print(f'{url} processing time: {round(datetime.now().timestamp() - start, 1)}')
 
     if res.status_code != 200:
         raise CustomError("Error during data fetching", f'{url}, {res.json()}')
 
     data = res.json()
+    request_name = url.replace("https://fabman.io/api/v1", "").split("?")[0]
+
+    session.setdefault(f'fabman: {request_name}', round(datetime.now().timestamp() - start, 3))
 
     if "/training-courses" in url:
         if isinstance(data, list):
