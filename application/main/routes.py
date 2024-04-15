@@ -1,3 +1,4 @@
+import os
 import requests
 from flask import Response, request, jsonify, session
 from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time
@@ -74,7 +75,8 @@ def add_classmarker_training():
 @track_api_time
 @error_handler
 def get_list_of_absolved_trainings(member_id: str):
-    trainings = get_active_user_trainings_and_user_data(member_id, request.headers.get("Authorization"))[0]
+    token = os.environ['FABMAN_API_KEY']
+    trainings = get_active_user_trainings_and_user_data(member_id, token)[0]
     res = []
 
     for t in trainings:
@@ -91,7 +93,7 @@ def get_list_of_absolved_trainings(member_id: str):
 @track_api_time
 @error_handler
 def get_list_of_available_trainings(member_id: str):
-    token = request.headers.get("Authorization")
+    token = os.environ['FABMAN_API_KEY']
     user_active_trainings, user_data = get_active_user_trainings_and_user_data(member_id, token)
     trainings = data_from_get_request("https://fabman.io/api/v1/training-courses", token)
 

@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 
 from .services.extensions import swagger, mail
 
@@ -8,6 +9,8 @@ def create_app() -> Flask:
     """
     app = Flask("classmarker_fabman_bridge")
     app.config.from_object("application.configs.flask_config_file")
+
+    CORS(app)
 
     register_extensions(app)
     register_blueprints(app)
