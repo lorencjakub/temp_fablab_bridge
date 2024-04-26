@@ -63,26 +63,117 @@ cm_hook_body = {
     "result": cm_result
 }
 
-cm_urls_schema = {
+training_urls_inputs = {
+    "type": "object",
+    "required": [
+        "member_id",
+        "training_id"
+    ],
+    "properties": {
+        "member_id": {
+            "type": "integer",
+            "description": "Member ID from Fabman"
+        },
+        "training_id": {
+            "type": "integer",
+            "description": "Training-course ID from Fabman"
+        }
+    },
+    "example": {
+        "member_id": 123456,
+        "training_id": 1234
+    }
+}
+
+training_urls_outputs = {
+    "type": "object",
+    "properties": {
+        "quiz_url": {
+            "type": "string",
+            "description": "Full URL to CM quiz"
+        },
+        "yt_url": {
+            "type": "string",
+            "description": "YouTube video URL"
+        },
+        "wiki_url": {
+            "type": "string",
+            "description": "FL wiki URL of"
+        },
+        "title": {
+            "type": "string",
+            "description": "Name of training"
+        }
+    },
+    "example": {
+        "quiz_url": "https://www.classmarker.com/online-test/start/?quiz=XXXXXXXXXXXXXXXX&cm_user_id=encrypted<membed_id-training_id>",
+        "yt_url": "https://www.yt.com/test_url",
+        "wiki_url": "https://www.wiki.com/test_url",
+        "title": "Test training"
+    }
+}
+
+training_urls_schema = {
     "tags": [
-        "cm-urls"
+        "training-urls"
     ],
     "parameters": [
-        {
-            "name": "Authorization",
-            "in": "headers",
-            "required": True,
-            "type": "string",
-            "description": "FabMan API Token",
-            "example": "Bearer XXXX"
-        },
         {
             "name": "body",
             "in": "body",
             "type": "object",
             "required": True,
             "schema": {
-                "$ref": "#/definitions/CM URLs"
+                "$ref": "#/definitions/TrainingURLSInputs"
+            }
+        }
+    ],
+    "securityDefinitions": {
+        "apiKey": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "Token for cronjob request"
+        }
+    },
+    "security": [
+        {
+            "apiKey": []
+        }
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
+    "deprecated": False,
+    "definitions": {
+        "TrainingURLSInputs": training_urls_inputs,
+        "TrainingURLSOuputs": training_urls_outputs
+    },
+    "responses": {
+        "200": {
+            "description": "Full URL for online course",
+            "schema": {
+                "$ref": "#definitions/TrainingURLSOuputs"
+            }
+        }
+    }
+}
+
+expiration_schema = {
+    "tags": [
+        "training-expiration"
+    ],
+    "parameters": [
+        {
+            "name": "body",
+            "in": "body",
+            "type": "object",
+            "required": True,
+            "schema": {
+                "$ref": "#/definitions/TrainingURLSInputs"
             }
         }
     ],
@@ -93,46 +184,15 @@ cm_urls_schema = {
         "application/json"
     ],
     "deprecated": False,
-    # "externalDocs": [
-    #     {
-    #         "description": "Fabman members",
-    #         "url": "https://fabman.io/api/v1/documentation#/members"
-    #     }
-    # ],
     "definitions": {
-        "CM URLs": {
-            "type": "object",
-            "required": [
-                "member_id",
-                "training_id"
-            ],
-            "properties": {
-                "member_id": {
-                    "type": "integer",
-                    "description": "Member ID from Fabman"
-                },
-                "training_id": {
-                    "type": "integer",
-                    "description": "Training-course ID from Fabman"
-                },
-                "base_quiz_url": {
-                    "type": "string",
-                    "description": "Raw ClassMarker quiz URL"
-                }
-            },
-            "example": {
-                "member_id": 123456,
-                "training_id": 1234,
-                "base_quiz_url": "https://www.classmarker.com/online-test/start/?quiz=XXXXXXXXXXXXXXXX"
-            }
-        }
+        "TrainingURLSInputs": training_urls_inputs,
+        "TrainingURLSOuputs": training_urls_outputs
     },
     "responses": {
         "200": {
             "description": "Full URL for online course",
             "schema": {
-                "type": "string",
-                "example": "https://www.classmarker.com/online-test/start/?quiz=XXXXXXXXXXXXXXXX&cm_user_id=encrypted<membed_id-training_id>"
+                "$ref": "#definitions/TrainingURLSOuputs"
             }
         }
     }
@@ -144,20 +204,14 @@ absolved_trainings_schema = {
     ],
     "parameters": [
         {
-            "name": "Authorization",
-            "in": "headers",
-            "required": True,
-            "type": "string",
-            "description": "FabMan API Token",
-            "example": "Bearer XXXX"
-        },
-
-        {
             "name": "member_id",
             "in": "path",
             "type": "integer",
             "required": True
         }
+    ],
+    "consumes": [
+        "text/plain"
     ],
     "produces": [
         "application/json"
@@ -288,14 +342,6 @@ available_trainings_schema = {
     ],
     "parameters": [
         {
-            "name": "Authorization",
-            "in": "headers",
-            "required": True,
-            "type": "string",
-            "description": "FabMan API Token",
-            "example": "Bearer XXXX"
-        },
-        {
             "name": "member_id",
             "in": "path",
             "type": "integer",
@@ -324,12 +370,6 @@ cm_quiz_hook_schema = {
         "add-training"
     ],
     "parameters": [
-        {
-            "name": "X-Classmarker-Hmac-Sha256",
-            "in": "headers",
-            "required": True,
-            "type": "string"
-        },
         {
             "name": "body",
             "in": "body",

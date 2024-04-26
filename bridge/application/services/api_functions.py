@@ -63,7 +63,7 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     :raises Ran out of attempts: Fail counter of training is on maximum value, user is not able to retry this quiz
     :return: list of failed courses for users metadata update
     """
-
+    # TODO změna na courses_cm
     failed_courses_list = member_metadata.get("failed_courses") or []
     current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
 
@@ -280,3 +280,34 @@ def get_active_user_trainings_and_user_data(member_id: str, token: str) -> Tuple
             "lockVersion": data["lockVersion"]
         }
     )
+
+
+def get_training_links_fn(request_data: Dict, token: str) -> Dict:
+    """
+    Get information for training's detail page
+    """
+
+    member_id = request_data.get("member_id")
+    training_id = request_data.get("training_id")
+
+    if not member_id or not training_id:
+        raise ValueError("Missing member_id or training_id")
+
+    training = data_from_get_request(f'https://fabman.io/api/v1/training-courses/{training_id}', token)
+
+    if not training:
+        raise CustomError("Training is disabled for web")
+
+    link = create_cm_link(
+        member_id,
+        training_id,
+        [training],
+        token
+    )
+
+    return {
+        "title": training["title"],
+        "quiz_url": link,
+        "yt_url": training["metadata"].get("yt_url"),
+        "wiki_url": training["metadata"].get("wiki_url")
+    }

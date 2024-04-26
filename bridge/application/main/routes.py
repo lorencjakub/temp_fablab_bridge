@@ -1,27 +1,37 @@
 import os
 import requests
-from flask import Response, request, jsonify, session
-from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time
+from flask import Response, request, jsonify, render_template
 
+from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time
 from ..configs import swagger_config
-from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME, MAX_COURSE_ATTEMPTS
+from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME,\
+    MAX_COURSE_ATTEMPTS, CRONJOB_TOKEN
 from . import main
 from ..services.error_handlers import CustomError, error_handler
 from ..services.api_functions import verify_payload, process_failed_attempt, add_training_to_member, \
     remove_failed_training_from_user, get_active_user_trainings_and_user_data, create_cm_link, \
-    check_members_training, data_from_get_request
+    check_members_training, data_from_get_request, get_training_links_fn
 from ..services.extensions import mail, Message, swag_from
 
 
-@main.route("/add_classmarker_training/", methods=["POST"])
+@main.route("/add_classmarker_training", methods=["POST"])
 @swag_from(swagger_config.cm_quiz_hook_schema)
 @error_handler
 def add_classmarker_training():
+    """
+    Endpoint for ClasMarker webhook
+    """
+
     hmac_header = request.headers.get('X-Classmarker-Hmac-Sha256')
     request_data = request.json
 
     if VERIFY_CLASSMARKER_REQUESTS and not verify_payload(request.data, hmac_header.encode('ascii', 'ignore')):
         raise CustomError("Unauthorized webhook access")
+
+    payload_status = request_data.get("payload_status")
+
+    if payload_status == "verify":
+        return Response({}, 200)
 
     identifiers = decrypt_identifiers(request_data["result"].get("cm_user_id"))
     member_id = int(identifiers.split("-")[0])
@@ -32,13 +42,19 @@ def add_classmarker_training():
         FABMAN_API_KEY
     )
 
+    training = data_from_get_request(
+        f'https://fabman.io/api/v1/training-courses/{training_id}',
+        FABMAN_API_KEY
+    )
+
     if not request_data["result"]["passed"]:
         attempts = process_failed_attempt(member_id, training_id, True, member_data=member_data,
                                           return_attempts=True, token=FABMAN_API_KEY)
 
         # <<<---------------------- EMAIL: FAILED TRAINING, X ATTEMPTS LEFT---------------------->>>
-        msg = Message('Test failed', sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])
-        msg.body = f'You failed your test :( {MAX_COURSE_ATTEMPTS - attempts} attempts left'
+        template = "failed_attempt.html" if attempts < MAX_COURSE_ATTEMPTS else "out_of_attempts.html"
+        msg = Message("FabLab info - test failed", sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])
+        msg.html = render_template(template, training_title=training["title"])
         mail.send(msg)
 
         return Response("Failed attempt saved in Fabman", 200)
@@ -63,8 +79,8 @@ def add_classmarker_training():
     print(f'User ID {member_id} absolved training ID {training_id}')
 
     # <<<---------------------- EMAIL: TRAINING PASSED ---------------------->>>
-    msg = Message('Test passed', sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])
-    msg.body = "You passed the test! Now you can use the device."
+    msg = Message("FabLab info - test passed", sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])
+    msg.html = render_template("succeed_attempt.html", training_title=training["title"])
     mail.send(msg)
 
     return Response("Training passed, updated in Fabman", 200)
@@ -75,6 +91,10 @@ def add_classmarker_training():
 @track_api_time
 @error_handler
 def get_list_of_absolved_trainings(member_id: str):
+    """
+    List of member's active trainings
+    """
+
     token = os.environ['FABMAN_API_KEY']
     trainings = get_active_user_trainings_and_user_data(member_id, token)[0]
     res = []
@@ -93,11 +113,16 @@ def get_list_of_absolved_trainings(member_id: str):
 @track_api_time
 @error_handler
 def get_list_of_available_trainings(member_id: str):
+    """
+    List of all trainings available for online course
+    """
+
     token = os.environ['FABMAN_API_KEY']
     user_active_trainings, user_data = get_active_user_trainings_and_user_data(member_id, token)
     trainings = data_from_get_request("https://fabman.io/api/v1/training-courses", token)
 
-    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings if t.get("metadata") and t["metadata"].get("for_web")]
+    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings
+                      if t.get("metadata") and t["metadata"].get("for_web")]
     user_active_trainings_ids = [at["id"] for at in user_active_trainings]
 
     available_trainings_for_member = [t for t in trainings_data if t["id"] not in user_active_trainings_ids]
@@ -123,38 +148,47 @@ def get_list_of_available_trainings(member_id: str):
     return for_render
 
 
-# ------------------------ !!!DEVELOPMENT!!! ------------------------
-@main.route("/create_cm_link", methods=["POST"])
-@swag_from(swagger_config.cm_urls_schema)
+@main.route("/get_training_links", methods=["POST"])
+@swag_from(swagger_config.training_urls_schema)
 @error_handler
-def create_quiz_link():
+def get_training_links():
     """
-    TEST API for URL function
+    Training's detail
     """
     request_data = request.json
 
+    return jsonify(get_training_links_fn(request_data, request.headers.get("Authorization")))
+
+
+@main.route("/training_expiration", methods=["POST"])
+@swag_from(swagger_config.expiration_schema)
+@error_handler
+def training_expiration():
+    """
+    Handle expiration of trainings
+    """
+    request_data = request.json
     member_id = request_data.get("member_id")
-    training_id = request_data.get("training_id")
-    base_quiz_url = request_data.get("base_quiz_url")
-    token = request.headers.get("Authorization")
 
-    training = {
-        "id": training_id,
-        "metadata": {"cm_url": base_quiz_url}
-    }
+    if not member_id:
+        raise ValueError("Missing member_id")
 
-    if not base_quiz_url:
-        training = data_from_get_request(f'https://fabman.io/api/v1/training-courses/{training_id}', token)
+    if request.headers.get("CronjobToken") != CRONJOB_TOKEN:
+        raise CustomError("Unauthorized access")
 
-    link = create_cm_link(
-        member_id,
-        training_id,
-        [training],
-        token
+    member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}', FABMAN_API_KEY)
+    training_data = get_training_links_fn(request_data, FABMAN_API_KEY)
+
+    # <<<---------------------- EMAIL: TRAINING EXPIRATION ---------------------->>>
+    msg = Message("FabLab info - training expiration", sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])
+    msg.html = render_template(
+        "training_expiration.html",
+        training_title=training_data.get("title"),
+        training_url=training_data.get("quiz_url")
     )
-    return Response(link, 200)
+    mail.send(msg)
 
-# ------------------------ !!!DEVELOPMENT!!! ------------------------
+    return Response("", 200)
 
 
 # ------------------------ !!!FUTURE!!! ------------------------
@@ -162,11 +196,11 @@ def create_quiz_link():
 @error_handler
 def activities_notifications():
     """
-    Future functionality, event listener for disabled and re-enabled resources.
+    Future functionality, event listener for disabled and re-enabled resources
     :return: info about resource
     """
     request_data = request.json
-    print("REQUEST DATA", request_data)
+
     if request_data.get("type") != "resource_updated":
         return Response("Not a resource update event, ignored", 200)
 

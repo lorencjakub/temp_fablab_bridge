@@ -1,3 +1,5 @@
+from pathlib import Path
+import os
 from flask import Flask
 from flask_cors import CORS
 
@@ -7,7 +9,7 @@ from .services.extensions import swagger, mail
 def create_app() -> Flask:
     """Create application factory
     """
-    app = Flask("classmarker_fabman_bridge")
+    app = Flask("classmarker_fabman_bridge", template_folder=Path(os.getcwd(), "templates"))
     app.config.from_object("application.configs.flask_config_file")
 
     CORS(app)

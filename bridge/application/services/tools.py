@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import session
+from flask import session, Response
 import json
 from cryptography.fernet import Fernet
 from functools import wraps
@@ -90,7 +90,7 @@ def track_api_time(f):
             headers["Durations"] = dict(session)
 
         return (
-            json.dumps(res),
+            res if isinstance(res, Response) else json.dumps(res),
             200,
             headers
         )
