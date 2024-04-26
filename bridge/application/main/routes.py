@@ -1,12 +1,13 @@
 import os
 import requests
 from flask import Response, request, jsonify, render_template
+import hashlib
 
 from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time,\
     training_for_filter
 from ..configs import swagger_config
 from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME,\
-    MAX_COURSE_ATTEMPTS, CRONJOB_TOKEN
+    MAX_COURSE_ATTEMPTS, CRONJOB_TOKEN, COURSES_WEB_PRIVATE_KEY
 from . import main
 from ..services.error_handlers import CustomError, error_handler
 from ..services.api_functions import verify_payload, process_failed_attempt, add_training_to_member, \
@@ -177,6 +178,9 @@ def training_expiration():
     if request.headers.get("CronjobToken") != CRONJOB_TOKEN:
         raise CustomError("Unauthorized access")
 
+    public_key = hashlib.sha512(f'{member_id}{COURSES_WEB_PRIVATE_KEY}'.encode()).hexdigest()
+    url = f'skoleni.fablabbrno.cz?id={member_id}&key={public_key}'
+
     member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}', FABMAN_API_KEY)
     training_data = get_training_links_fn(request_data, FABMAN_API_KEY)
 
@@ -185,7 +189,7 @@ def training_expiration():
     msg.html = render_template(
         "training_expiration.html",
         training_title=training_data.get("title"),
-        training_url=training_data.get("quiz_url")
+        training_url=url
     )
     mail.send(msg)
 
