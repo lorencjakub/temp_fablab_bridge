@@ -2,7 +2,8 @@ import os
 import requests
 from flask import Response, request, jsonify, render_template
 
-from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time
+from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time,\
+    training_for_filter
 from ..configs import swagger_config
 from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME,\
     MAX_COURSE_ATTEMPTS, CRONJOB_TOKEN
@@ -122,7 +123,7 @@ def get_list_of_available_trainings(member_id: str):
     trainings = data_from_get_request("https://fabman.io/api/v1/training-courses", token)
 
     trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings
-                      if t.get("metadata") and t["metadata"].get("for_web")]
+                      if training_for_filter(t, "for_web")]
     user_active_trainings_ids = [at["id"] for at in user_active_trainings]
 
     available_trainings_for_member = [t for t in trainings_data if t["id"] not in user_active_trainings_ids]

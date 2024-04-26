@@ -6,6 +6,12 @@ from ..services.extensions import mail, Message
 from ..configs.config import MAIL_USERNAME, FABLAB_SUPPORT_EMAIL, FABMAN_API_KEY
 
 
+ERROR_WHITELIST = [
+    "Ran out of attempts",
+    "Training is disabled for web"
+]
+
+
 class CustomError(Exception):
     def __init__(self, description, error_data=None):
         self.args = (description, error_data)
@@ -13,22 +19,18 @@ class CustomError(Exception):
         self.data = error_data
         super().__init__()
 
+    def __str__(self):
+        return self.description
+
 
 def handle_exception(fn_name: str, e: Exception, member_id: int = None) -> Response:
     from ..services.api_functions import data_from_get_request
 
     error = f'{e.__class__.__name__}: {str(e)}'
 
-    if isinstance(e, CustomError):
-        print(e.description, e.data)
-        error = e.description
-
-    else:
-        print(error, e.args)
-
     print(traceback.format_exc())
 
-    if fn_name == "add_classmarker_training":
+    if fn_name == "add_classmarker_training" and str(e) not in ERROR_WHITELIST:
         user_email = None
 
         if member_id:
@@ -59,7 +61,7 @@ def error_handler(f):
             return f(*args, **kwargs)
 
         except Exception as e:
-            member_id = request.json.get("member_id")
+            member_id = request.json.get("member_id") if request.method.lower() != "get" else None
 
             if request.path == "/add_classmarker_training":
                 identifiers = decrypt_identifiers(request.json["result"].get("cm_user_id"))

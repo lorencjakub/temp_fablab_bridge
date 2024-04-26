@@ -7,7 +7,8 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 
 from typing import Dict, List, Union, Tuple
-from application.services.tools import get_current_training_with_index, get_member_training, expired_date
+from application.services.tools import get_current_training_with_index, get_member_training, expired_date,\
+    training_for_filter
 from application.configs.config import CLASSMARKER_WEBHOOK_SECRET, FABMAN_API_KEY, MAX_COURSE_ATTEMPTS, FERNET_KEY
 from ..services.error_handlers import CustomError
 
@@ -63,8 +64,7 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     :raises Ran out of attempts: Fail counter of training is on maximum value, user is not able to retry this quiz
     :return: list of failed courses for users metadata update
     """
-    # TODO změna na courses_cm
-    failed_courses_list = member_metadata.get("failed_courses") or []
+    failed_courses_list = (member_metadata.get("failed_courses") or [])
     current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
 
     if not count_attempts:
@@ -185,9 +185,9 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
 
     if "/training-courses" in url:
         if isinstance(data, list):
-            return [t for t in data if (t.get("metadata") or {}).get("for_web")]
+            return [t for t in data if training_for_filter(t, "for_web")]
 
-        return data if (data.get("metadata") or {}).get("for_web") else {}
+        return data if training_for_filter(data, "for_web") else {}
 
     return data
 
@@ -242,7 +242,8 @@ def create_cm_link(member_id: int | str, training_id: int | str, training_list: 
         return ""
 
     index, training = get_current_training_with_index(training_list, training_id)
-    base_url = training["metadata"].get("cm_url") if training.get("metadata") else ""
+    courses_cm = training["metadata"].get("courses_cm") or {}
+    base_url = courses_cm.get("cm_url") or ""
 
     f = Fernet(FERNET_KEY.encode("ascii", "ignore"))
     id_string = f'{member_id}-{training_id}'
@@ -305,9 +306,11 @@ def get_training_links_fn(request_data: Dict, token: str) -> Dict:
         token
     )
 
+    courses_cm = training["metadata"].get("courses_cm") or {}
+
     return {
         "title": training["title"],
         "quiz_url": link,
-        "yt_url": training["metadata"].get("yt_url"),
-        "wiki_url": training["metadata"].get("wiki_url")
+        "yt_url": courses_cm.get("yt_url"),
+        "wiki_url": courses_cm.get("wiki_url")
     }

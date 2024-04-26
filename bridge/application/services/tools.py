@@ -96,3 +96,14 @@ def track_api_time(f):
         )
 
     return decorator
+
+
+def training_for_filter(training: Dict, filter_name: str) -> bool:
+    metadata = training["metadata"]
+
+    if not metadata:
+        return False
+
+    courses_cm = metadata.get("courses_cm") or {}
+
+    return bool(courses_cm.get(filter_name))
