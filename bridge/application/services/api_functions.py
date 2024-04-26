@@ -64,7 +64,9 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     :raises Ran out of attempts: Fail counter of training is on maximum value, user is not able to retry this quiz
     :return: list of failed courses for users metadata update
     """
-    failed_courses_list = (member_metadata.get("failed_courses") or [])
+    courses_cm = member_metadata.get("courses_cm") or {"failed_courses": []}
+    failed_courses_list = courses_cm.get("failed_courses")
+
     current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
 
     if not count_attempts:
@@ -102,9 +104,9 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
     if not member_data:
         member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}/', token)
 
-    member_metadata = member_data.get("metadata") or {}
-    member_metadata["failed_courses"] = parse_failed_courses_data(member_metadata, training_id, count_attempts,
-                                                                  token=token)
+    member_metadata = member_data.get("metadata") or {"courses_cm": {}}
+    member_metadata["courses_cm"]["failed_courses"] = parse_failed_courses_data(member_metadata, training_id,
+                                                                                count_attempts, token=token)
 
     if count_attempts:
         new_member_data = {
@@ -122,7 +124,7 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
             raise CustomError("Error during failed training saving")
 
     if return_attempts:
-        updated_fail = next((f for f in member_metadata["failed_courses"] if f["id"] == training_id), {"attempts": 0})
+        updated_fail = next((f for f in member_metadata["courses_cm"]["failed_courses"] if f["id"] == training_id), {"attempts": 0})
 
         return updated_fail["attempts"]
 
@@ -137,7 +139,8 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
     """
 
     member_metadata = member_data["metadata"]
-    failed_courses_list = member_metadata.get("failed_courses")
+    courses_cm = member_metadata.get("courses_cm") or {"failed_courses": []}
+    failed_courses_list = courses_cm.get("failed_courses")
 
     if failed_courses_list and any((f for f in failed_courses_list if f["id"] == training_id)):
         current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
