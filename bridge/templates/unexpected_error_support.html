@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+
+    <body width="100%" style="margin: 0; padding: 35px">
+        <center style="width: 100%; background-color: transparent;">
+            <table style="width: 80%; margin-top: 40px;">
+                <tr>
+                    <td style="padding-bottom: 20px;">
+                        <span>
+                            Neočekávaná chyba!
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Nastala chyba při zpracování requestu:
+                    </td>
+                </tr>
+                {% for row in error_stack %}
+                    <tr>
+                        <td style="padding-top: 20px;">
+                            {{ row }}
+                        </td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td>
+                        Podívej se prosím na to a kontaktuj uživatele <a href="mailto:{{ user_email }}">{{ user_email }}</a>.
+                    </td>
+                </tr>
+            </table>
+            <table style="width: 80%; margin-top: 40px;">
+                <tr>
+                    <td style="padding-bottom: 20px;">
+                        <span>
+                            Unexpected error!
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        An error appear during request processing:
+                    </td>
+                </tr>
+                {% for row in error_stack %}
+                    <tr>
+                        <td style="padding-top: 20px;">
+                            {{ row }}
+                        </td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td>
+                        Please check it out and contact the user <a href="mailto:{{ user_email }}">{{ user_email }}</a>.
+                    </td>
+                </tr>
+            </table>
+        </center>
+    </body>
+</html>

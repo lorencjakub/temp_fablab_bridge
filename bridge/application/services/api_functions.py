@@ -7,7 +7,8 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 
 from typing import Dict, List, Union, Tuple
-from application.services.tools import get_current_training_with_index, get_member_training, expired_date
+from application.services.tools import get_current_training_with_index, get_member_training, expired_date,\
+    training_for_filter
 from application.configs.config import CLASSMARKER_WEBHOOK_SECRET, FABMAN_API_KEY, MAX_COURSE_ATTEMPTS, FERNET_KEY
 from ..services.error_handlers import CustomError
 
@@ -63,8 +64,9 @@ def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | in
     :raises Ran out of attempts: Fail counter of training is on maximum value, user is not able to retry this quiz
     :return: list of failed courses for users metadata update
     """
+    courses_cm = member_metadata.get("courses_cm") or {"failed_courses": []}
+    failed_courses_list = courses_cm.get("failed_courses")
 
-    failed_courses_list = member_metadata.get("failed_courses") or []
     current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
 
     if not count_attempts:
@@ -102,9 +104,9 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
     if not member_data:
         member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}/', token)
 
-    member_metadata = member_data.get("metadata") or {}
-    member_metadata["failed_courses"] = parse_failed_courses_data(member_metadata, training_id, count_attempts,
-                                                                  token=token)
+    member_metadata = member_data.get("metadata") or {"courses_cm": {}}
+    member_metadata["courses_cm"]["failed_courses"] = parse_failed_courses_data(member_metadata, training_id,
+                                                                                count_attempts, token=token)
 
     if count_attempts:
         new_member_data = {
@@ -122,7 +124,7 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
             raise CustomError("Error during failed training saving")
 
     if return_attempts:
-        updated_fail = next((f for f in member_metadata["failed_courses"] if f["id"] == training_id), {"attempts": 0})
+        updated_fail = next((f for f in member_metadata["courses_cm"]["failed_courses"] if f["id"] == training_id), {"attempts": 0})
 
         return updated_fail["attempts"]
 
@@ -137,7 +139,8 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
     """
 
     member_metadata = member_data["metadata"]
-    failed_courses_list = member_metadata.get("failed_courses")
+    courses_cm = member_metadata.get("courses_cm") or {"failed_courses": []}
+    failed_courses_list = courses_cm.get("failed_courses")
 
     if failed_courses_list and any((f for f in failed_courses_list if f["id"] == training_id)):
         current_course_with_index = get_current_training_with_index(failed_courses_list, training_id)
@@ -185,9 +188,9 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
 
     if "/training-courses" in url:
         if isinstance(data, list):
-            return [t for t in data if (t.get("metadata") or {}).get("for_web")]
+            return [t for t in data if training_for_filter(t, "for_web")]
 
-        return data if (data.get("metadata") or {}).get("for_web") else {}
+        return data if training_for_filter(data, "for_web") else {}
 
     return data
 
@@ -242,7 +245,8 @@ def create_cm_link(member_id: int | str, training_id: int | str, training_list: 
         return ""
 
     index, training = get_current_training_with_index(training_list, training_id)
-    base_url = training["metadata"].get("cm_url") if training.get("metadata") else ""
+    courses_cm = training["metadata"].get("courses_cm") or {}
+    base_url = courses_cm.get("cm_url") or ""
 
     f = Fernet(FERNET_KEY.encode("ascii", "ignore"))
     id_string = f'{member_id}-{training_id}'
@@ -280,3 +284,36 @@ def get_active_user_trainings_and_user_data(member_id: str, token: str) -> Tuple
             "lockVersion": data["lockVersion"]
         }
     )
+
+
+def get_training_links_fn(request_data: Dict, token: str) -> Dict:
+    """
+    Get information for training's detail page
+    """
+
+    member_id = request_data.get("member_id")
+    training_id = request_data.get("training_id")
+
+    if not member_id or not training_id:
+        raise ValueError("Missing member_id or training_id")
+
+    training = data_from_get_request(f'https://fabman.io/api/v1/training-courses/{training_id}', token)
+
+    if not training:
+        raise CustomError("Training is disabled for web")
+
+    link = create_cm_link(
+        member_id,
+        training_id,
+        [training],
+        token
+    )
+
+    courses_cm = training["metadata"].get("courses_cm") or {}
+
+    return {
+        "title": training["title"],
+        "quiz_url": link,
+        "yt_url": courses_cm.get("yt_url"),
+        "wiki_url": courses_cm.get("wiki_url")
+    }
