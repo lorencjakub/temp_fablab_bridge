@@ -1,0 +1,21 @@
+FROM python:3.11-alpine
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN pip install --upgrade pip setuptools wheel
+
+COPY requirements.txt /app
+RUN pip install -r requirements.txt
+
+COPY . /app/
+
+ARG FABMAN_API_KEY=""
+ARG CRONJOB_TOKEN=""
+ARG RAILWAY_API_URL=""
+
+EXPOSE 8000
+
+CMD env && python3 main_run.py
