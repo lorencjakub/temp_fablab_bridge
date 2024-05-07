@@ -14,10 +14,29 @@ ClassMarker webhooks info:
 
 ## ENV VARIABLES:
 
-*	FABMAN_API_KEY https://fabman.io/api/v1/documentation
-*	MAX_COURSE_ATTEMPTS (global allowed counts of attempts of every course)
-*	CLASSMARKER_WEBHOOK_SECRET https://www.classmarker.com/online-testing/docs/webhooks/#how-to-verify-webhook-payloads
-*	FERNET_KEY crypto https://cryptography.io/en/latest/fernet/
+Crypto and auth:
+* CLASSMARKER_WEBHOOK_SECRET: https://www.classmarker.com/online-testing/docs/webhooks/#how-to-verify-webhook-payloads
+* COURSES_WEB_PRIVATE_KEY: private key for FabLab web
+* CRONJOB_TOKEN: verification token for scheduler service
+* FABMAN_API_KEY: https://fabman.io/api/v1/documentation
+* FERNET_KEY: token for symmetric cryptography https://cryptography.io/en/latest/fernet/
+* SECRET_KEY: token for Flask server
+
+Email config (https://pythonhosted.org/Flask-Mail/)
+* FABLAB_SUPPORT_EMAIL: email address of FabLab support
+* MAIL_PASSWORD: password/app password for email client
+* MAIL_PORT: port or email client
+* MAIL_SERVER: smtp server for email client
+* MAIL_USERNAME: email (sender) for email client
+* MAIL_USE_SSL: (boolean) use SSL connection for emails
+* MAIL_USE_TLS: (boolean) use TSL connection for emails
+
+Other:
+* BE_ENV: name of environment ("prod" for production)
+* MAX_COURSE_ATTEMPTS (global allowed counts of attempts of every course)
+* TRACK_TIME: (boolean) track requests processing time and return it in response header
+
+
 
 <br>
 <br>
@@ -54,7 +73,7 @@ Get active (not expired) trainings of specific user for UI section "Absolved tra
                 "id": 135,
                 "lockVersion": 1,
                 "trainingCourse": 456,
-                "untilDate": null
+                "untilDate": None
             }
         ],
         "privileges": {

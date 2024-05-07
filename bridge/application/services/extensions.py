@@ -7,25 +7,19 @@ SWAGGER_TEMPLATE = {
         "apiKey": {
             "type": "apiKey",
             "name": "Authorization",
-            "in": "header"
-        },
-        "cm_hmac": {
-            "type": "apiKey",
-            "name": "X-Classmarker-Hmac-Sha256",
-            "in": "header"
+            "in": "header",
+            "description": "Bearer Fabman API token"
         },
         "cronjob_token": {
             "type": "apiKey",
             "name": "CronjobToken",
-            "in": "header"
+            "in": "header",
+            "description": "Token for railway cronjob verification"
         }
     },
     "security": [
         {
             "apiKey": []
-        },
-        {
-            "cm_hmac": []
         },
         {
             "cronjob_token": []

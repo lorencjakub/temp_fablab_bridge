@@ -1,3 +1,6 @@
+TYPE_JSON = "application/json"
+
+
 example_training_course = {
     "account": 1,
     "createdAt": "2017-06-29T12:25:20.095Z",
@@ -106,7 +109,7 @@ training_urls_outputs = {
         }
     },
     "example": {
-        "quiz_url": "https://www.classmarker.com/online-test/start/?quiz=XXXXXXXXXXXXXXXX&cm_user_id=encrypted<membed_id-training_id>",
+        "quiz_url": "https://www.classmarker.com/online-test/start/?quiz=XXX&cm_user_id=encrypted<membed_id-training_id>",
         "yt_url": "https://www.yt.com/test_url",
         "wiki_url": "https://www.wiki.com/test_url",
         "title": "Test training"
@@ -128,24 +131,11 @@ training_urls_schema = {
             }
         }
     ],
-    "securityDefinitions": {
-        "apiKey": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": "Token for cronjob request"
-        }
-    },
-    "security": [
-        {
-            "apiKey": []
-        }
-    ],
     "consumes": [
-        "application/json"
+        TYPE_JSON
     ],
     "produces": [
-        "application/json"
+        TYPE_JSON
     ],
     "deprecated": False,
     "definitions": {
@@ -178,10 +168,10 @@ expiration_schema = {
         }
     ],
     "consumes": [
-        "application/json"
+        TYPE_JSON
     ],
     "produces": [
-        "application/json"
+        TYPE_JSON
     ],
     "deprecated": False,
     "definitions": {
@@ -214,7 +204,7 @@ absolved_trainings_schema = {
         "text/plain"
     ],
     "produces": [
-        "application/json"
+        TYPE_JSON
     ],
     "deprecated": False,
     "definitions": {
@@ -349,7 +339,7 @@ available_trainings_schema = {
         }
     ],
     "produces": [
-        "application/json"
+        TYPE_JSON
     ],
     "deprecated": False,
     "responses": {
@@ -387,7 +377,7 @@ cm_quiz_hook_schema = {
         }
     ],
     "produces": [
-        "application/json"
+        TYPE_JSON
     ],
     "definitions": {
         "CMTest": {

@@ -3,8 +3,7 @@ import requests
 from flask import Response, request, jsonify, render_template
 import hashlib
 
-from application.services.tools import decrypt_identifiers, filter_non_admins_trainings, track_api_time,\
-    training_for_filter
+from application.services.tools import decrypt_identifiers, track_api_time
 from ..configs import swagger_config
 from application.configs.config import VERIFY_CLASSMARKER_REQUESTS, FABMAN_API_KEY, MAIL_USERNAME,\
     MAX_COURSE_ATTEMPTS, CRONJOB_TOKEN, COURSES_WEB_PRIVATE_KEY
@@ -21,7 +20,7 @@ from ..services.extensions import mail, Message, swag_from
 @error_handler
 def add_classmarker_training():
     """
-    Endpoint for ClasMarker webhook
+    Endpoint for ClassMarker webhook
     """
 
     hmac_header = request.headers.get('X-Classmarker-Hmac-Sha256')
@@ -121,17 +120,18 @@ def get_list_of_available_trainings(member_id: str):
 
     token = os.environ['FABMAN_API_KEY']
     user_active_trainings, user_data = get_active_user_trainings_and_user_data(member_id, token)
-    trainings = data_from_get_request("https://fabman.io/api/v1/training-courses", token)
 
-    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings
-                      if training_for_filter(t, "for_web")]
+    trainings_url = "https://fabman.io/api/v1/training-courses?q=for_web"
+
+    if user_data.get("privileges") != "admin":
+        trainings_url += ",for_members"
+
+    trainings = data_from_get_request(trainings_url, token)
+
+    trainings_data = [{k: t[k] for k in ["id", "title", "metadata"]} for t in trainings]
     user_active_trainings_ids = [at["id"] for at in user_active_trainings]
 
     available_trainings_for_member = [t for t in trainings_data if t["id"] not in user_active_trainings_ids]
-
-    if user_data["privileges"] != "admin":
-        available_trainings_for_member = filter_non_admins_trainings(available_trainings_for_member)
-
     for_render = []
 
     for t in available_trainings_for_member:
@@ -179,7 +179,7 @@ def training_expiration():
         raise CustomError("Unauthorized access")
 
     public_key = hashlib.sha512(f'{member_id}{COURSES_WEB_PRIVATE_KEY}'.encode()).hexdigest()
-    url = f'skoleni.fablabbrno.cz?id={member_id}&key={public_key}'
+    url = f'https://skoleni.fablabbrno.cz?id={member_id}&key={public_key}'
 
     member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}', FABMAN_API_KEY)
     training_data = get_training_links_fn(request_data, FABMAN_API_KEY)
