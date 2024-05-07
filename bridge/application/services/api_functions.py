@@ -7,8 +7,7 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 
 from typing import Dict, List, Union, Tuple
-from application.services.tools import get_current_training_with_index, get_member_training, expired_date,\
-    training_for_filter
+from application.services.tools import get_current_training_with_index, get_member_training, expired_date
 from application.configs.config import CLASSMARKER_WEBHOOK_SECRET, FABMAN_API_KEY, MAX_COURSE_ATTEMPTS, FERNET_KEY
 from ..services.error_handlers import CustomError
 
@@ -186,12 +185,6 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
 
     session.setdefault(f'fabman: {request_name}', round(datetime.now().timestamp() - start, 3))
 
-    if "/training-courses" in url:
-        if isinstance(data, list):
-            return [t for t in data if training_for_filter(t, "for_web")]
-
-        return data if training_for_filter(data, "for_web") else {}
-
     return data
 
 
@@ -244,8 +237,10 @@ def create_cm_link(member_id: int | str, training_id: int | str, training_list: 
 
         return ""
 
-    index, training = get_current_training_with_index(training_list, training_id)
-    courses_cm = training["metadata"].get("courses_cm") or {}
+    _, training = get_current_training_with_index(training_list, training_id)
+
+    metadata = training.get("metadata") or {}
+    courses_cm = metadata.get("courses_cm") or {}
     base_url = courses_cm.get("cm_url") or ""
 
     f = Fernet(FERNET_KEY.encode("ascii", "ignore"))
