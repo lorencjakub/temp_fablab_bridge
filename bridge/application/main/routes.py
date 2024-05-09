@@ -140,7 +140,7 @@ def get_list_of_available_trainings(member_id: str):
             t["id"],
             available_trainings_for_member,
             token,
-            member_data={"metadata": user_data["metadata"], "lockVersion": user_data["lockVersion"]}
+            member_data={"metadata": user_data["metadata"] or {}, "lockVersion": user_data["lockVersion"]}
         )
 
         del t["metadata"]

@@ -137,7 +137,7 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
     :return: None
     """
 
-    member_metadata = member_data["metadata"]
+    member_metadata = member_data["metadata"] or {}
     courses_cm = member_metadata.get("courses_cm") or {"failed_courses": []}
     failed_courses_list = courses_cm.get("failed_courses")
 
