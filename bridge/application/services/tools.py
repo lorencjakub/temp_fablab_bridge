@@ -60,7 +60,7 @@ def decrypt_identifiers(crypto: str) -> str:
         identifiers = f.decrypt(crypto).decode()
 
     if not identifiers or len(identifiers.split("-")) != 2 or not identifiers.replace("-", "").isdigit():
-        raise CustomError("Missing or wrong IDs")
+        raise CustomError(f'Missing or wrong IDs: {identifiers} for {crypto}')
 
     return identifiers
 
