@@ -120,7 +120,7 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
         )
 
         if res.status_code != 200:
-            raise CustomError("Error during failed training saving")
+            raise CustomError(f'Error during failed training saving - {res.text}')
 
     if return_attempts:
         updated_fail = next((f for f in member_metadata["courses_cm"]["failed_courses"] if f["id"] == training_id), {"attempts": 0})
@@ -163,7 +163,7 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
             )
 
             if res.status_code != 200:
-                raise CustomError("Error during failed training removing from metadata")
+                raise CustomError(f'Error during failed training removing from metadata - {res.text}')
 
 
 def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
@@ -178,7 +178,7 @@ def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
     res = requests.get(url, headers={"Authorization": f'{token}'})
 
     if res.status_code != 200:
-        raise CustomError("Error during data fetching", f'{url}, {res.json()}')
+        raise CustomError("Error during data fetching", f'{url}, {res.text}')
 
     data = res.json()
     request_name = url.replace("https://fabman.io/api/v1", "").split("?")[0]
