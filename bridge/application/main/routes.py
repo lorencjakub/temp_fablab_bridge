@@ -48,10 +48,10 @@ def add_classmarker_training():
         FABMAN_API_KEY
     )
 
-    if not request_data["result"]["passed"]:
-        attempts = process_failed_attempt(member_id, training_id, True, member_data=member_data,
-                                          return_attempts=True, token=FABMAN_API_KEY)
+    attempts = process_failed_attempt(member_id, training_id, True, member_data=member_data,
+                                      return_attempts=True, token=FABMAN_API_KEY)
 
+    if not request_data["result"]["passed"]:
         # <<<---------------------- EMAIL: FAILED TRAINING, X ATTEMPTS LEFT---------------------->>>
         template = "failed_attempt.html" if attempts < MAX_COURSE_ATTEMPTS else "out_of_attempts.html"
         msg = Message("FabLab info - test failed", sender=MAIL_USERNAME, recipients=[member_data["emailAddress"]])

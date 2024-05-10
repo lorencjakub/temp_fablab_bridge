@@ -55,7 +55,7 @@ def handle_exception(fn_name: str, e: Exception, error_stack: List[str], member_
             error_stack=error_stack
         )
         mail.send(msg)
-        
+
     print("\n".join(error_stack))
 
     return Response(f'Error: {error}, for more information check applications log', 200)
