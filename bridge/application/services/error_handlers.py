@@ -32,20 +32,26 @@ def handle_exception(fn_name: str, e: Exception, member_id: int = None) -> Respo
 
     if fn_name == "add_classmarker_training" and str(e) not in ERROR_WHITELIST:
         user_email = None
+        error_stack = traceback.format_exc().split("\n")
 
-        if member_id:
-            member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}', FABMAN_API_KEY)
-            user_email = member_data["emailAddress"]
+        try:
+            if member_id:
+                member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}', FABMAN_API_KEY)
+                user_email = member_data["emailAddress"]
 
-            msg = Message("Fablab info - process error", sender=MAIL_USERNAME, recipients=[user_email])
-            msg.html = render_template("unexpected_error.html")
-            mail.send(msg)
+                msg = Message("Fablab info - process error", sender=MAIL_USERNAME, recipients=[user_email])
+                msg.html = render_template("unexpected_error.html")
+                mail.send(msg)
+
+        except Exception:
+            error_stack.append("ERROR DURING SENDING FAIL EMAIL TO USER:")
+            error_stack.extend(traceback.format_exc().split("\n"))
 
         msg = Message("Fablab info - process error", sender=MAIL_USERNAME, recipients=[FABLAB_SUPPORT_EMAIL])
         msg.html = render_template(
             "unexpected_error_support.html",
             user_email=user_email,
-            error_stack=traceback.format_exc().split("\n")
+            error_stack=error_stack
         )
         mail.send(msg)
 

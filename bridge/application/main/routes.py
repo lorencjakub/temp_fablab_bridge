@@ -48,9 +48,6 @@ def add_classmarker_training():
         FABMAN_API_KEY
     )
 
-    if not training.get("title"):
-        raise ValueError(f'Missing title of training - {training}')
-
     if not request_data["result"]["passed"]:
         attempts = process_failed_attempt(member_id, training_id, True, member_data=member_data,
                                           return_attempts=True, token=FABMAN_API_KEY)
