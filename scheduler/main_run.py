@@ -66,8 +66,10 @@ def send_expiration_notification(member_id: int, training_course_id: int) -> boo
     if res.status_code != 200:
         print(f'Error during {training_course_id} for user {member_id}')
         print(res.content)
+
     else:
         print(f'email with training {training_course_id} sent to user {member_id}')
+
     return res.status_code == 200
 
 
@@ -80,8 +82,9 @@ def remove_expired_course(member_id: int, user_course_id: int) -> bool:
     if res.status_code != 204:
         print(f'Error during removing {user_course_id} for user {member_id}')
         print(res.content)
+
     else:
-        print(f'training {user_course_id} removed from user {member_id}')
+        print(f'Training {user_course_id} removed from user {member_id}')
 
     return res.status_code == 200
 
@@ -115,18 +118,14 @@ def check_expired_trainings():
     if requests.get(f'{RAILWAY_API_URL}/health').status_code != 200:
         return
 
-    print("Starting expiration check")
-
     if os.getenv("TEST_USER"):
         members = [data_from_get_request(
             f'https://fabman.io/api/v1/members/{os.getenv("TEST_USER")}?embed=trainings',
             os.getenv("FABMAN_API_KEY")
         )]
-        print(os.getenv("TEST_USER"), members)
 
     else:
         members = data_from_get_request("https://fabman.io/api/v1/members?embed=trainings", os.getenv("FABMAN_API_KEY"))
-        print(members[:5])
 
     checked_trainings = 0
     expired_trainings = 0
@@ -146,7 +145,6 @@ def check_expired_trainings():
 
     print(f'Checked {checked_trainings} trainings of {len(members)} members. Expired {expired_trainings} trainings.')
 
-print("Module init")
+
 if __name__ == "__main__":
-    print("Should start")
     check_expired_trainings()

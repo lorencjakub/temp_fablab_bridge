@@ -66,6 +66,8 @@ def add_classmarker_training():
     )
 
     add_training_to_member(member_id, training_id)
+
+    member_data["lockVersion"] += 1
     remove_failed_training_from_user(member_data, member_id, training_id)
 
     if expired_training_id:
@@ -75,7 +77,7 @@ def add_classmarker_training():
         )
 
         if res.status_code != 204:
-            raise CustomError("Error during old training removing")
+            raise CustomError(f'Error during old training removing - {res.text}. Member ID: {member_id}, training ID: {expired_training_id}')
 
     print(f'User ID {member_id} absolved training ID {training_id}')
 
@@ -140,7 +142,7 @@ def get_list_of_available_trainings(member_id: str):
             t["id"],
             available_trainings_for_member,
             token,
-            member_data={"metadata": user_data["metadata"] or {}, "lockVersion": user_data["lockVersion"]}
+            member_data={"metadata": user_data["metadata"] or {}}
         )
 
         del t["metadata"]

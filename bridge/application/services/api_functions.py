@@ -49,7 +49,7 @@ def add_training_to_member(member_id: int, training_id: int) -> None:
     )
 
     if res.status_code != 201:
-        raise CustomError("Error during passed training posting")
+        raise CustomError(f'Error during passed training posting - {res.text}. Member ID: {member_id}, data: {new_training_data}')
 
 
 def parse_failed_courses_data(member_metadata: Dict[str, List[Dict[str, str | int]]], training_id: int,
@@ -104,6 +104,7 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
         member_data = data_from_get_request(f'https://fabman.io/api/v1/members/{member_id}/', token)
 
     member_metadata = member_data.get("metadata") or {"courses_cm": {}}
+    member_metadata["courses_cm"] = member_metadata.get("courses_cm") or {}
     member_metadata["courses_cm"]["failed_courses"] = parse_failed_courses_data(member_metadata, training_id,
                                                                                 count_attempts, token=token)
 
@@ -120,7 +121,7 @@ def process_failed_attempt(member_id: int, training_id: int, count_attempts: boo
         )
 
         if res.status_code != 200:
-            raise CustomError(f'Error during failed training saving - {res.text}')
+            raise CustomError(f'Error during failed training saving - {res.text}. Member ID: {member_id}, data: {new_member_data}')
 
     if return_attempts:
         updated_fail = next((f for f in member_metadata["courses_cm"]["failed_courses"] if f["id"] == training_id), {"attempts": 0})
@@ -163,7 +164,7 @@ def remove_failed_training_from_user(member_data: Dict, member_id: int, training
             )
 
             if res.status_code != 200:
-                raise CustomError(f'Error during failed training removing from metadata - {res.text}')
+                raise CustomError(f'Error during failed training removing from metadata - {res.text}. Member ID: {member_id}, data: {new_member_data}')
 
 
 def data_from_get_request(url: str, token: str) -> Union[List, Dict]:
@@ -203,7 +204,7 @@ def check_members_training(training_id: int, trainings: List[Dict]) -> str:
 
     if old_training and old_training.get("untilDate"):
         if not expired_date(old_training["untilDate"]):
-            raise CustomError("Member has already absolved this training and it is still active")
+            raise CustomError(f'Member has already absolved this training ({training_id}) and it is still active')
 
         expired_training_id = old_training["id"]
 
