@@ -67,7 +67,11 @@ def add_classmarker_training():
 
     add_training_to_member(member_id, training_id)
 
-    member_data["lockVersion"] += 1
+    member_data = data_from_get_request(
+        f'https://fabman.io/api/v1/members/{member_id}?embed=trainings',
+        FABMAN_API_KEY
+    )
+
     remove_failed_training_from_user(member_data, member_id, training_id)
 
     if expired_training_id:
