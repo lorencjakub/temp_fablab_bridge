@@ -3,7 +3,7 @@
 Flask bridge for online courses.
 
 # LOCAL RUN
-Clone repository, create a new virtual environment and install all dependencies from **requirements.txt** file (recomended python version *3.11.3*). Then just set up environment variables and run **main_run.py** file. When you run Flask server, you can use project Swagger on http://localhost:{port}/apidocs/ (default port for Flask server is 5000).
+Clone repository, create a new virtual environment and install all dependencies from **requirements.txt** file (recommended python version *3.11.3*). Then just set up environment variables and run **main_run.py** file. When you run Flask server, you can use project Swagger on http://localhost:{port}/apidocs/ (default port for Flask server is 5000).
 Alternatively you can build and run docker container from Dockerfile.dev.
 
 <br>
@@ -53,7 +53,7 @@ Other:
 
 ## WORKFLOW 1 - GET ABSOLVED COURSES ON USER'S PROFILE PAGE
 Get active (not expired) trainings of specific user.  
-![Absolved trainings workflow schema](/diagrams/absolved_trainings.jpg "Absolved trainings workflow schema")
+![Absolved trainings workflow schema](/bridge/diagrams/absolved_trainings.jpg "Absolved trainings workflow schema")
 <br>
 <br>
 
@@ -84,8 +84,8 @@ Response of Bridge API:
 Get available (not absolved trainings or expired trainings) courses for specific user.
 Some of trainings could be only for admins, some of them could be presence-only without online version.
 User is not able to absolve online course if he is already out of attempts for it.  
-![Available trainings filter schema](/diagrams/available_trainings.jpg "Available trainings filter schema")  
-![Available trainings render schema](/diagrams/available_trainings_render.jpg "Available trainings render schema")  
+![Available trainings filter schema](/bridge/diagrams/available_trainings.jpg "Available trainings filter schema")  
+![Available trainings render schema](/bridge/diagrams/available_trainings_render.jpg "Available trainings render schema")  
 <br>
 <br>
 
@@ -113,7 +113,7 @@ Response of Bridge API:
 
 ## WORKFLOW 3 - ONLINE CLASSMARKER COURSE
 Integration of process for online courses. Find available course in your user profile -> open quiz via href button -> pass that quiz -> ClassMarker webhook call to FabLab bridge -> handle online course attempt.  
-![Online training workflow schema](/diagrams/online_training.jpg "Online training workflow schema")  
+![Online training workflow schema](/bridge/diagrams/online_training.jpg "Online training workflow schema")  
 <br>
 <br>
  
